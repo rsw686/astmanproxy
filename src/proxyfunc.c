@@ -212,6 +212,7 @@ void *ProxyLogoff(struct mansession *s) {
 	struct message m;
 
 	memset(&m, 0, sizeof(struct message));
+	AddHeader(&m, "Response: Goodbye");
 	AddHeader(&m, "Goodbye: Y'all come back now, y'hear?");
 
 	s->output->write(s, &m);
