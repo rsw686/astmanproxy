@@ -588,7 +588,7 @@ void ResendFromStack(char* uniqueid, struct mansession *s, struct message *m)
 }
 
 int ValidateAction(struct message *m, struct mansession *s, int inbound) {
-	char *channel, *channel1, *channel2;
+	char *channel;
 	char *context;
 	char *uchannel;
 	char *ucontext;
@@ -698,7 +698,7 @@ int ValidateAction(struct message *m, struct mansession *s, int inbound) {
 		}
 		if( !cmatched ) {
 			if( debug )
-				debugmsg("Message filtered (chan): %s != %s", channel, uchannel);
+				debugmsg("Message filtered (chan): %s != %s", channel || "ERR", uchannel);
 			return 0;
 		}
 	}
