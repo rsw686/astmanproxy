@@ -60,7 +60,17 @@ struct proxy_user {
 	char account[80];
 	char server[80];
 	char more_events[2];
+	char filters[80];
+	unsigned int filter_bits;
 	struct proxy_user *next;
+};
+
+#define FILT_TOK_CDRONLY "cdronly"
+#define FILT_TOK_NOVAR   "novar"
+
+enum filters {
+	FILT_CDRONLY = (1 << 0),	/* Only pass CDR events. Nothing else. */
+	FILT_NOVAR =   (1 << 1),	/* Never send SetVar/VarSet events to this client */
 };
 
 struct proxyconfig {

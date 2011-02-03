@@ -227,7 +227,7 @@ int WriteClients(struct message *m) {
 					memmove( actionid, actionid+strlen(c->actionid), strlen(actionid)+1-strlen(c->actionid));
 					c->output->write(c, m);
 				} else if (debug > 5)
-					debugmsg("ActionID Filtered a message to a client\n");
+					debugmsg("ActionID Filtered a message to a client");
 			} else
 				c->output->write(c, m);
 

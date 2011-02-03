@@ -186,6 +186,7 @@ void *ProxyLogin(struct mansession *s, struct message *m) {
 				strcpy(s->user.account, pu->account);
 				strcpy(s->user.server, pu->server);
 				strcpy(s->user.more_events, pu->more_events);
+				s->user.filter_bits = pu->filter_bits;
 				pthread_mutex_unlock(&s->lock);
 				if( debug )
 					debugmsg("Login as: %s", user);
@@ -605,21 +606,25 @@ int ValidateAction(struct message *m, struct mansession *s, int inbound) {
 	if( pc.authrequired && !s->authenticated )
 		return 0;
 
-	if( inbound )	// Inbound to client from server
+	if( inbound )	// Inbound from server to client
 		ucontext = s->user.icontext;
 	else		// Outbound from client to server
 		ucontext = s->user.ocontext;
 	uchannel = s->user.channel;
 
-	// There is no filering, so just return quickly.
-	if( uchannel[0] == '\0' && ucontext[0] == '\0' && s->user.account[0] == '\0' )
+	// There is no other filering, so just return quickly.
+	if( uchannel[0] == '\0' && ucontext[0] == '\0' && s->user.account[0] == '\0' && s->user.filter_bits == 0 ) {
+		if( debug > 5 )
+			debugmsg("Message validated - no filtering");
 		return 1;
+	}
 
 	event = astman_get_header(m, "Event");
 	uniqueid = astman_get_header(m, "Uniqueid");
+
 	if( uniqueid[0] != '\0' && IsInStack(uniqueid, s) ) {
 		if( debug )
-			debugmsg("Message passed (uniqueid): %s already allowed", uniqueid);
+			debugmsg("Message validated (uniqueid): %s already allowed", uniqueid);
 		if( !strcasecmp( event, "Hangup" ) )
 			DelFromStack(m, s);
 		return 1;
@@ -627,7 +632,7 @@ int ValidateAction(struct message *m, struct mansession *s, int inbound) {
 	uniqueid = astman_get_header(m, "Uniqueid1");
 	if( uniqueid[0] != '\0' && IsInStack(uniqueid, s) ) {
 		if( debug )
-			debugmsg("Message passed (uniqueid1): %s already allowed", uniqueid);
+			debugmsg("Message validated (uniqueid1): %s already allowed", uniqueid);
 		if( !strcasecmp( event, "Hangup" ) )
 			DelFromStack(m, s);
 		return 1;
@@ -635,7 +640,7 @@ int ValidateAction(struct message *m, struct mansession *s, int inbound) {
 	uniqueid = astman_get_header(m, "Uniqueid2");
 	if( uniqueid[0] != '\0' && IsInStack(uniqueid, s) ) {
 		if( debug )
-			debugmsg("Message passed (uniqueid2): %s already allowed", uniqueid);
+			debugmsg("Message validated (uniqueid2): %s already allowed", uniqueid);
 		if( !strcasecmp( event, "Hangup" ) )
 			DelFromStack(m, s);
 		return 1;
@@ -646,10 +651,34 @@ int ValidateAction(struct message *m, struct mansession *s, int inbound) {
 	response = astman_get_header(m, "Response");
 	actionid = astman_get_header(m, ACTION_ID);
 	if( response[0] != '\0' && actionid[0] != '\0' && !strcmp(actionid, s->actionid) ) {
-		if (s->autofilter < 2 && !strcmp(actionid, s->actionid))
+		if (s->autofilter < 2 && !strcmp(actionid, s->actionid)) {
+			if( debug > 5 )
+				debugmsg("Message validated - actionID");
 			return 1;
-		else if ( !strncmp(actionid, s->actionid, strlen(s->actionid)) )
+		} else if ( !strncmp(actionid, s->actionid, strlen(s->actionid)) ) {
+			if( debug > 5 )
+				debugmsg("Message validated - actionID");
 			return 1;
+		}
+	}
+
+	// Handle special filter flags
+	if( inbound && s->user.filter_bits & FILT_CDRONLY ) {
+		if( !strcasecmp( event, "CDR" ) ) {
+			if( debug )
+				debugmsg("CDRONLY set. Is a CDR. Allowed");
+			return 1;
+		} else {
+			if( debug )
+				debugmsg("CDRONLY set. Not a CDR. Blocked");
+			return 0;
+		}
+	}
+	if( inbound && s->user.filter_bits & FILT_NOVAR ) {
+		if( !strcasecmp( event, "SetVar" ) )
+			return 0;
+		else if( !strcasecmp( event, "VarSet" ) )
+			return 0;
 	}
 
 	action = astman_get_header(m, "Action");
@@ -730,7 +759,7 @@ int ValidateAction(struct message *m, struct mansession *s, int inbound) {
 		}
 	}
 
-	// Outbound or unfiltered packets are passed.
+	// Outbound or unfiltered packets are validated.
 	if( !inbound || (uchannel[0] == '\0' && ucontext[0] == '\0') ) {
 		return 1;
 	}
