@@ -1,3 +1,13 @@
+astmanproxy (1.23.1) unstable; urgency=low
+
+  * Segfault fix in standard.so
+  * 100% CPU usage fix in httpd.so
+  * New Autofilter mechanism added
+  * Version number bumped to 1.23
+  * Correct build deps in debian package info (fixed by nud)
+
+ -- Steve Davies <steved@ipcortex.co.uk>  Fri, 27 Feb 2009 14:40:04 +0000
+
 astmanproxy (1.21.90) unstable; urgency=low
 
   * Correcting the attribution in this file as it was never
