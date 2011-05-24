@@ -511,7 +511,7 @@ void FreeStack(struct mansession *s)
 	t = s->stack;
 
 	while( t ) {
-		n = t->next;	// Grab next entry BEFORE we free the slot
+		n = t->next;		// Grab next entry BEFORE we free the slot
 		if( t->message )
 			free( t->message );
 		free( t );
@@ -620,8 +620,32 @@ int ValidateAction(struct message *m, struct mansession *s, int inbound) {
 	}
 
 	event = astman_get_header(m, "Event");
-	uniqueid = astman_get_header(m, "Uniqueid");
 
+	// Handle special filter flags before IsInStack checks
+	if( inbound && s->user.filter_bits & FILT_CDRONLY ) {
+		if( !strcasecmp( event, "CDR" ) ) {
+			if( debug )
+				debugmsg("CDRONLY set. Is a CDR. Allowed");
+			return 1;
+		} else {
+			if( debug )
+				debugmsg("CDRONLY set. Not a CDR. Blocked");
+			return 0;
+		}
+	}
+	if( inbound && s->user.filter_bits & FILT_NOVAR ) {
+		if( !strcasecmp( event, "SetVar" ) ) {
+			if( debug )
+				debugmsg("NOVAR set. Blocked SetVar");
+			return 0;
+		} else if( !strcasecmp( event, "VarSet" ) ) {
+			if( debug )
+				debugmsg("NOVAR set. Blocked VarSet");
+			return 0;
+		}
+	}
+
+	uniqueid = astman_get_header(m, "Uniqueid");
 	if( uniqueid[0] != '\0' && IsInStack(uniqueid, s) ) {
 		if( debug )
 			debugmsg("Message validated (uniqueid): %s already allowed", uniqueid);
@@ -660,25 +684,6 @@ int ValidateAction(struct message *m, struct mansession *s, int inbound) {
 				debugmsg("Message validated - actionID");
 			return 1;
 		}
-	}
-
-	// Handle special filter flags
-	if( inbound && s->user.filter_bits & FILT_CDRONLY ) {
-		if( !strcasecmp( event, "CDR" ) ) {
-			if( debug )
-				debugmsg("CDRONLY set. Is a CDR. Allowed");
-			return 1;
-		} else {
-			if( debug )
-				debugmsg("CDRONLY set. Not a CDR. Blocked");
-			return 0;
-		}
-	}
-	if( inbound && s->user.filter_bits & FILT_NOVAR ) {
-		if( !strcasecmp( event, "SetVar" ) )
-			return 0;
-		else if( !strcasecmp( event, "VarSet" ) )
-			return 0;
 	}
 
 	action = astman_get_header(m, "Action");
@@ -727,16 +732,16 @@ int ValidateAction(struct message *m, struct mansession *s, int inbound) {
 				}
 			}
 		}
-		if( cfound && !cmatched ) {	// We find at least one matchable header, but no matches.
+		if( cfound && !cmatched ) {
 			if( debug )
-				debugmsg("Message filtered %d channel headers != %s", cfound, uchannel);
+				debugmsg("Message filtered %d chan headers != %s", cfound, uchannel);
 			return 0;
 		}
 	}
 
 	context = astman_get_header(m, "Context");
 	if( context[0] != '\0' && ucontext[0] != '\0' ) {
-		if( strcasecmp( context, ucontext ) ) {
+		if( strcmp( context, ucontext ) ) {
 			if( debug )
 				debugmsg("Message filtered (ctxt): %s != %s", context, ucontext);
 			return 0;
