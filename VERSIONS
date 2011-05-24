@@ -1,3 +1,12 @@
+1.24pre110524
+	Improved I/O buffering for very busy systems.
+	Performance boost - No need to bzero quite so much.
+	Clean out server buffers before re-opening.
+	Shutdown tries to nicely clean up threads.
+	New forcebanner option to set the initial banner output.
+	Attempt to handle quoted values in config file.
+	Matching on context is now correctly case-sensitive.
+
 1.24pre110203 - Add new filter types per-user
         cdronly: Only CDR events
         novar: Block SetVar/VarSet events
