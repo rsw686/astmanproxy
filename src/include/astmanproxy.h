@@ -27,8 +27,9 @@
 #define BUFSIZE		 1024
 #define MAX_HEADERS	 256
 #define MAX_LEN		 1024
+#define MAX_LEN_INBUF	 (1024*1024)
 #define MAX_STACK	 1024
-#define MAX_STACKDATA	 32768
+#define MAX_STACKDATA	 (1024*32)
 
 #define ATS_RESERVED    1
 #define ATS_UNIQUE      2
@@ -95,6 +96,7 @@ struct proxyconfig {
 	int acceptencryptedconnection;	/* accept encrypted connections? */
 	int acceptunencryptedconnection;	/* accept unencrypted connections? */
 	char certfile[256];			/* our SERVER-side SSL certificate file */
+	char forcebanner[80];			/* override banner output in 'standard' protocol */
 };
 
 struct iohandler {
@@ -117,8 +119,9 @@ struct mansession {
 	pthread_mutex_t lock;
 	struct sockaddr_in sin;
 	int fd;
-	char inbuf[MAX_LEN];
+	char inbuf[MAX_LEN_INBUF];
 	int inlen;
+	int inoffset;
 	struct iohandler *input;
 	struct iohandler *output;
 	int autofilter;
@@ -159,6 +162,7 @@ int StartServer(struct ast_server *srv);
 int WriteAsterisk(struct message *m);
 char *astman_get_header(struct message *m, char *var);
 int proxyerror_do(struct mansession *s, char *err);
+int get_input_block(struct mansession *s, struct message *m);
 int get_input(struct mansession *s, char *output);
 int SetIOHandlers(struct mansession *s, char *ifmt, char *ofmt);
 void destroy_session(struct mansession *s);
