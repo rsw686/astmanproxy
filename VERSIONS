@@ -6,6 +6,7 @@
 	New forcebanner option to set the initial banner output.
 	Attempt to handle quoted values in config file.
 	Matching on context is now correctly case-sensitive.
+	Fix priority of cdronly and novar filters
 
 1.24pre110203 - Add new filter types per-user
         cdronly: Only CDR events
