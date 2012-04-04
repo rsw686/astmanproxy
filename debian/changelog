@@ -1,3 +1,24 @@
+astmanproxy (1.26) unstable; urgency=low
+
+   * Include MANY fixes roll-up from OOB development.
+   * Change sessionlock from MUTEX to RWLOCK
+   * Add several RDLOCK cases to prevent segfaults on connection close
+   * Include latest "Newstate" with packet replay code.
+   * Fix autofilter option for ActionID filtering.
+   * Fix replay filtering. Dial cmd seems to have changed.
+   * Fix buffer code to handle v.v.v.long lines on input.
+   * Additional bounds checking on MAX_HEADERS to try and
+     catch a core dump.
+   * New FILT_BRIONLY and FILT_XFRONLY rules
+   * Clean up server connection buffer before trying
+     to connect.
+   * Cancel threads before cleaning up their memory.
+   * Increase the input buffer and optimise how the buffer is managed
+   * Very busy systems can get backlogged on read buffers
+     Try to resolve this by polling for new data on every read.
+ 
+ -- Steve Davies <steved@ipcortex.co.uk>  Wed,  4 Apr 2012 14:54:46 +0100
+
 astmanproxy (1.23.2) unstable; urgency=low
 
   * Improved I/O for very busy systems.

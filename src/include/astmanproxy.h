@@ -67,11 +67,15 @@ struct proxy_user {
 };
 
 #define FILT_TOK_CDRONLY "cdronly"
+#define FILT_TOK_BRIONLY "brionly"
+#define FILT_TOK_XFRONLY "xfronly"
 #define FILT_TOK_NOVAR   "novar"
 
 enum filters {
-	FILT_CDRONLY = (1 << 0),	/* Only pass CDR events. Nothing else. */
-	FILT_NOVAR =   (1 << 1),	/* Never send SetVar/VarSet events to this client */
+	FILT_CDRONLY = (1 << 0),	/* Only pass CDR events. Nothing else (except other FILT_???ONLY). */
+	FILT_BRIONLY = (1 << 1),	/* Only pass Bridge events. Nothing else (except other FILT_???ONLY). */
+	FILT_XFRONLY = (1 << 2),	/* Only pass Transfer events. Nothing else (except other FILT_???ONLY). */
+	FILT_NOVAR =   (1 << 3),	/* Never send SetVar/VarSet events to this client */
 };
 
 struct proxyconfig {
@@ -112,6 +116,7 @@ struct mstack {
 	struct mstack *next;
 	char uniqueid[80];
 	char *message;
+	char *state;
 };
 
 struct mansession {

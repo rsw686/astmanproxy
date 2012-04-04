@@ -1,3 +1,19 @@
+1.26
+	Additional filter options to pass.
+        brionly: Only Bridge events.
+        xfronly: Only Transfer events.
+        Combined ???only filters allow all matching types to pass.
+	Fix long standing crash due to insufficient locking.
+	Fix a couple of possible crash/core dump cases.
+	Enhanced packet replay code.
+	Fix autofilter option for ActionID filtering.
+	Fix replay filtering. Dial cmd seems to have changed.
+	Fix buffer code to handle v.v.v.long lines on input.
+		(Would hang data stream)
+
+1.25
+	Minor makefile tweak
+
 1.24pre110524
 	Improved I/O buffering for very busy systems.
 	Performance boost - No need to bzero quite so much.

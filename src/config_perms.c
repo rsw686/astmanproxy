@@ -76,6 +76,10 @@ void *add_userperm(char* username, char *userspec, struct proxy_user **pu) {
 
 	if( strcasestr(user->filters, FILT_TOK_CDRONLY) )
 		user->filter_bits |= FILT_CDRONLY;
+	if( strcasestr(user->filters, FILT_TOK_BRIONLY) )
+		user->filter_bits |= FILT_BRIONLY;
+	if( strcasestr(user->filters, FILT_TOK_XFRONLY) )
+		user->filter_bits |= FILT_XFRONLY;
 	if( strcasestr(user->filters, FILT_TOK_NOVAR) )
 		user->filter_bits |= FILT_NOVAR;
 
