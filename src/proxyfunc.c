@@ -624,28 +624,36 @@ void ResendFromStack(char* uniqueid, struct mansession *s, struct message *m, st
 		{
 			// Got message, pull from cache.
 			int i, h, j;
-			for( i=0,h=0,j=0; i < strlen(t->message) && i < MAX_STACKDATA - 1 && h < MAX_HEADERS - 1; i++ ) {
-				if( t->message[i] == '\n' || i-j >= MAX_LEN ) {
-					strncpy( m->headers[h], t->message + j, i-j );
-					m->headers[h][MAX_LEN-1] = '\0';
-					j = i + 1;
-					if( debug )
-						debugmsg("remade: %s", m->headers[h]);
-					h++;
+			if( t->message ) {
+				for( i=0,h=0,j=0; i < strlen(t->message) && i < MAX_STACKDATA - 1 && h < MAX_HEADERS - 1; i++ ) {
+					if( t->message[i] == '\n' || i-j >= MAX_LEN ) {
+						strncpy( m->headers[h], t->message + j, i-j );
+						m->headers[h][MAX_LEN-1] = '\0';
+						j = i + 1;
+						if( debug )
+							debugmsg("remade: %s", m->headers[h]);
+						h++;
+					}
 				}
-			}
-			m->hdrcount = h;
-			for( i=0,h=0,j=0; i < strlen(t->state) && i < MAX_STACKDATA - 1 && h < MAX_HEADERS - 1; i++ ) {
-				if( t->state[i] == '\n' || i-j >= MAX_LEN ) {
-					strncpy( m2->headers[h], t->state + j, i-j );
-					m2->headers[h][MAX_LEN-1] = '\0';
-					j = i + 1;
-					if( debug )
-						debugmsg("remade: %s", m2->headers[h]);
-					h++;
+				m->hdrcount = h;
+			} else
+				m->hdrcount = 0;
+
+			if( t->state ) {
+				for( i=0,h=0,j=0; i < strlen(t->state) && i < MAX_STACKDATA - 1 && h < MAX_HEADERS - 1; i++ ) {
+					if( t->state[i] == '\n' || i-j >= MAX_LEN ) {
+						strncpy( m2->headers[h], t->state + j, i-j );
+						m2->headers[h][MAX_LEN-1] = '\0';
+						j = i + 1;
+						if( debug )
+							debugmsg("remade: %s", m2->headers[h]);
+						h++;
+					}
 				}
-			}
-			m2->hdrcount = h;
+				m2->hdrcount = h;
+			} else
+				m->hdrcount = 0;
+
 			pthread_mutex_unlock(&s->lock);
 			return;
 		}
