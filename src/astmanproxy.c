@@ -242,7 +242,9 @@ int WriteClients(struct message *m) {
 			}
 		}
 
-		if ( (valret=ValidateAction(m, c, 1)) || autofilter == 1 ) {
+                if ( pc.authrequired && !c->authenticated ) {
+                        debugmsg("Validate Filtered a message to a not-logged-in client");
+                } else if ( (valret=ValidateAction(m, c, 1)) || autofilter == 1 ) {
 // If VALRET > 1, then we may want to send a retrospective NewChannel before
 // writing out this event...
 // Send the retrospective Newchannel from the cache (m->session->cache) to this client (c)...
