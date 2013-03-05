@@ -165,8 +165,6 @@ void *ProxyLogin(struct mansession *s, struct message *m) {
 	actionid = astman_get_header(m, "ActionID");
 
 	memset(&mo, 0, sizeof(struct message));
-	if( actionid && strlen(actionid) > 0 )
-		AddHeader(&mo, "ActionID: %s", actionid);
 	if( debug )
 		debugmsg("Login attempt as: %s/%s", user, secret);
 
@@ -177,6 +175,8 @@ void *ProxyLogin(struct mansession *s, struct message *m) {
 			if (!AuthMD5(key, s->challenge, pu->secret) || !strcmp(secret, pu->secret) ) {
 				AddHeader(&mo, "Response: Success");
 				AddHeader(&mo, "Message: Authentication accepted");
+				if( actionid && strlen(actionid) > 0 )
+					AddHeader(&mo, "ActionID: %s", actionid);
 				s->output->write(s, &mo);
 				pthread_mutex_lock(&s->lock);
 				s->authenticated = 1;
