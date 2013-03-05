@@ -847,6 +847,7 @@ int main(int argc, char *argv[])
 	serv_sock_addr.sin_port = htons((short)pc.listen_port);
 
 	/* Set listener socket re-use options */
+	flag = 1;
 	setsockopt(asock, SOL_SOCKET, SO_REUSEADDR, (void *)&flag, sizeof(flag));
 	lingerstruct.l_onoff = 1;
 	lingerstruct.l_linger = 5;
