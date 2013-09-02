@@ -1,3 +1,10 @@
+1.28
+	Time for a new tagged version
+	HTTP speed up for large responses
+
+1.27
+	Not sure why this was never mentioned here?
+
 1.26
 	Additional filter options to pass.
         brionly: Only Bridge events.
