@@ -165,6 +165,7 @@ int _read(struct mansession *s, struct message *m) {
 
 	char line[MAX_LEN], method[10], formdata[MAX_LEN], status[15];
 	int res, clength = 0;
+	int timer = 30000;
 
 	memset(method, 0, sizeof method);
 	memset(formdata, 0, sizeof formdata);
@@ -173,11 +174,15 @@ int _read(struct mansession *s, struct message *m) {
 	/* for http, don't do get_input forever */
 	for (;;) {
 
-		if (s->inputcomplete && !s->outputcomplete) {
-			usleep(10);
-			continue;
-		} else if (s->inputcomplete && s->outputcomplete)
-			return -1;
+		if (s->inputcomplete) {
+			/* The response has started, wait for timeout or completion. */
+			while( timer > 0 && !s->outputcomplete) {
+				usleep(10);
+				timer -= 10;
+			}
+			s->outputcomplete = 1;
+			return -1;	/* Cause connection to close */
+		}
 
 		memset(line, 0, sizeof line);
 		res = get_input(s, line);
@@ -188,6 +193,12 @@ int _read(struct mansession *s, struct message *m) {
 
 			if ( !clength && !strncasecmp(line, "Content-Length: ", 16) )
 				clength = atoi(line+16);
+
+			if ( s->untilevent != '\0' && !strncasecmp(line, "X-Until-Event: ", 15) )
+				strncpy(s->untilevent, line+15, MAX_LEN-1);
+
+			if ( !strncasecmp(line, "X-Maxtime: ", 11) )
+				timer = atoi(line+11);
 
 			if (!*method) {
 				if ( !strncmp(line,"POST",4) ) {

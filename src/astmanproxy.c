@@ -303,9 +303,11 @@ int WriteClients(struct message *m) {
 				c->output->write(c, m);
 
 			if (c->inputcomplete) {
-				pthread_mutex_lock(&c->lock);
-				c->outputcomplete = 1;
-				pthread_mutex_unlock(&c->lock);
+				if ( c->untilevent == '\0' || !strncasecmp( event, c->untilevent, MAX_LEN ) ) {
+					pthread_mutex_lock(&c->lock);
+					c->outputcomplete = 1;
+					pthread_mutex_unlock(&c->lock);
+				}
 			}
 		} else if ( !c->server && m->hdrcount>1 && !valret && debug > 5)
 			debugmsg("Validate Filtered a message to a client");

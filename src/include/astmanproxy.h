@@ -139,6 +139,7 @@ struct mansession {
 	struct ast_server *server;
 	struct proxy_user user;
 	char actionid[MAX_LEN];
+	char untilevent[MAX_LEN];
 	char challenge[10];			/*! Authentication challenge */
 	int writetimeout;  			/* Timeout for ast_carefulwrite() */
 	struct mstack *stack;
