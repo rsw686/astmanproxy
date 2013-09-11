@@ -307,6 +307,8 @@ int WriteClients(struct message *m) {
 					pthread_mutex_lock(&c->lock);
 					c->outputcomplete = 1;
 					pthread_mutex_unlock(&c->lock);
+					if( debug > 2 )
+						debugmsg("Set output complete flag. untilevent = %s, event = %s", c->untilevent, event);
 				}
 			}
 		} else if ( !c->server && m->hdrcount>1 && !valret && debug > 5)

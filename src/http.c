@@ -186,10 +186,11 @@ int _read(struct mansession *s, struct message *m) {
 
 		memset(line, 0, sizeof line);
 		res = get_input(s, line);
-		debugmsg("res=%d, line: %s",res, line);
+		if (debug)
+			debugmsg("res=%d, line: %s",res, line);
 
-		if (res > 0) {
-			debugmsg("Got http: %s", line);
+		if (res > 0 && strlen(line)) {
+			debugmsg("Got http: %s (%d bytes)", line, strlen(line));
 
 			if ( !clength && !strncasecmp(line, "Content-Length: ", 16) )
 				clength = atoi(line+16);
@@ -218,12 +219,12 @@ int _read(struct mansession *s, struct message *m) {
 			/* x-www-form-urlencoded handler */
 			/* Content-Type: application/x-www-form-urlencoded */
 			if (*method && !*formdata) {
-				if ( !strcasecmp(method, "POST") && clength && s->inlen==clength) {
-				pthread_mutex_lock(&s->lock);
-				strncpy(formdata, s->inbuf, clength);
-				s->inlen = 0;
-				pthread_mutex_unlock(&s->lock);
-				sprintf(status, "200 OK");
+				if ( !strcasecmp(method, "POST") && clength && (s->inlen - s->inoffset)==clength) {
+					pthread_mutex_lock(&s->lock);
+					strncpy(formdata, s->inbuf + s->inoffset, clength);
+					s->inlen = 0;
+					pthread_mutex_unlock(&s->lock);
+					sprintf(status, "200 OK");
 				}
 			}
 		}
@@ -231,7 +232,7 @@ int _read(struct mansession *s, struct message *m) {
 		if (res < 0)
 			break;
 
-		if (*status) {
+		if ((res == 0 || strlen(line) == 0) && *status) {
 			HTTPHeader(s, status);
 
 			/* now, let's transform and copy into a standard message block */
