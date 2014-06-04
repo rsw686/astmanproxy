@@ -50,7 +50,7 @@ void *ProxyListSessions(struct mansession *s) {
 	while (c && (m.hdrcount < MAX_HEADERS - 4) ) {
 		if (!c->server) {
 			AddHeader(&m, "ProxyClientSession: %s", ast_inet_ntoa(iabuf, sizeof(iabuf), c->sin.sin_addr));
-			AddHeader(&m, "ProxyClientActionID: %s", c->actionid||"");
+			AddHeader(&m, "ProxyClientActionID: %s", c->actionid);
 			AddHeader(&m, "ProxyClientInputHandler: %s", c->input->formatname);
 			AddHeader(&m, "ProxyClientOutputHandler: %s", c->output->formatname);
 		} else 
