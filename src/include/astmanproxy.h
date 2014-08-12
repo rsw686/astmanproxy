@@ -18,6 +18,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <dlfcn.h>
+#include <sys/resource.h>
+#include <sys/prctl.h>
+#include <libgen.h>
 #ifdef __APPLE__
 	#include "poll-compat.h"
 #else
@@ -25,8 +28,9 @@
 #endif
 
 #define BUFSIZE		 1024
-#define MAX_HEADERS	 256
+#define MAX_HEADERS	 128
 #define MAX_LEN		 1024
+#define MAX_COMMAND_LEN	 (8192*1024)
 #define MAX_LEN_INBUF	 (1024*1024)
 #define MAX_STACK	 1024
 #define MAX_STACKDATA	 (1024*32)
@@ -149,7 +153,7 @@ struct mansession {
 
 struct message {
 	int hdrcount;
-	char headers[MAX_HEADERS][MAX_LEN];
+	char *headers[MAX_HEADERS];
 	int in_command;
 	struct mansession *session;
 };

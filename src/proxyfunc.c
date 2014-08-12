@@ -34,6 +34,7 @@ void *ProxyListIOHandlers(struct mansession *s) {
 	}
 
 	s->output->write(s, &m);
+	FreeHeaders(&m);
 	return 0;
 }
 
@@ -60,6 +61,7 @@ void *ProxyListSessions(struct mansession *s) {
 	pthread_rwlock_unlock(&sessionlock);
 
 	s->output->write(s, &m);
+	FreeHeaders(&m);
 	return 0;
 }
 
@@ -75,7 +77,7 @@ void *ProxySetOutputFormat(struct mansession *s, struct message *m) {
 	AddHeader(&mo, "OutputFormat: %s", s->output->formatname );
 
 	s->output->write(s, &mo);
-
+	FreeHeaders(&mo);
 	return 0;
 }
 
@@ -99,6 +101,7 @@ int ProxyChallenge(struct mansession *s, struct message *m) {
 		AddHeader(&mo, "ActionID: %s", actionid);
 
 	s->output->write(s, &mo);
+	FreeHeaders(&mo);
 	return 0;
 }
 
@@ -127,7 +130,7 @@ void *ProxySetAutoFilter(struct mansession *s, struct message *m) {
 	AddHeader(&mo, "AutoFilter: %d", s->autofilter);
 
 	s->output->write(s, &mo);
-
+	FreeHeaders(&mo);
 	return 0;
 }
 
@@ -183,6 +186,7 @@ void *ProxyLogin(struct mansession *s, struct message *m) {
 				if( actionid && strlen(actionid) > 0 )
 					AddHeader(&mo, "ActionID: %s", actionid);
 				s->output->write(s, &mo);
+				FreeHeaders(&mo);
 				pthread_mutex_lock(&s->lock);
 				s->authenticated = 1;
 				strcpy(s->user.channel, pu->channel);
@@ -225,12 +229,24 @@ void *ProxyLogoff(struct mansession *s, struct message *m) {
 		AddHeader(&mo, "ActionID: %s", actionid);
  
 	s->output->write(s, &mo);
- 
+	FreeHeaders(&mo);
+
 	destroy_session(s);
 	if (debug)
 		debugmsg("Client logged off - exiting thread");
 	pthread_exit(NULL);
 	return 0;
+}
+
+void *ProxyFullyBooted(struct mansession *s) {
+	struct message mo;
+
+	memset(&mo, 0, sizeof(struct message));
+	AddHeader(&mo, "Event: FullyBooted");
+	AddHeader(&mo, "Privilege: system,all");
+	AddHeader(&mo, "Status: Fully Booted");
+	s->output->write(s, &mo);
+	FreeHeaders(&mo);
 }
 
 int ProxyAddServer(struct mansession *s, struct message *m) {
@@ -271,6 +287,7 @@ int ProxyAddServer(struct mansession *s, struct message *m) {
 	}
 
 	s->output->write(s, &mo);
+	FreeHeaders(&mo);
 	return 0;
 }
 
@@ -306,6 +323,7 @@ int ProxyDropServer(struct mansession *s, struct message *m) {
 	}
 
 	s->output->write(s, &mo);
+	FreeHeaders(&mo);
 	return res;
 }
 
@@ -332,6 +350,7 @@ void *ProxyListServers(struct mansession *s) {
 	pthread_rwlock_unlock(&sessionlock);
 
 	s->output->write(s, &m);
+	FreeHeaders(&m);
 	return 0;
 }
 
@@ -369,7 +388,7 @@ int proxyerror_do(struct mansession *s, char *err)
 	AddHeader(&mo, "Message: %s", err);
 
 	s->output->write(s, &mo);
-
+	FreeHeaders(&mo);
 	return 0;
 }
 
@@ -914,6 +933,7 @@ void *SendError(struct mansession *s, char *errmsg, char *actionid) {
 		AddHeader(&m, "ActionID: %s", actionid);
 
 	s->output->write(s, &m);
+	FreeHeaders(&m);
 
 	return 0;
 }

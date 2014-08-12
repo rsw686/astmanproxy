@@ -3,7 +3,7 @@
 OSARCH=$(shell uname -s)
 OSREV=$(shell uname -r)
 
-VERSION := 1.28.2
+VERSION := 1.29
 DESTDIR ?=
 CONFDIR:=/etc/asterisk
 CONFDIR_REAL := $(DESTDIR)/etc/asterisk

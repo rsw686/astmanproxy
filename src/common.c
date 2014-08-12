@@ -116,16 +116,33 @@ int AddHeader(struct message *m, const char *fmt, ...) {
 
 	int res;
 
-	if (m->hdrcount < MAX_HEADERS - 1) {
-		va_start(ap, fmt);
-		vsprintf(m->headers[m->hdrcount], fmt, ap);
-		va_end(ap);
-		m->hdrcount++;
-		res = 0;
+	if (m->hdrcount < MAX_HEADERS - 1) {		
+		if(! (m->headers[m->hdrcount] = malloc(sizeof(char) * MAX_LEN))) {
+			res = 1;
+		} else {
+			memset(m->headers[m->hdrcount], 0, sizeof(char) * MAX_LEN);
+			
+			va_start(ap, fmt);
+			vsprintf(m->headers[m->hdrcount], fmt, ap);
+			va_end(ap);
+		
+			m->hdrcount++;
+			res = 0;
+		}
 	} else
 		res = 1;
 
 	return res;
+}
+
+void FreeHeaders(struct message *m) {
+	int i;
+	
+	for (i=0; i<m->hdrcount; i++) {
+		free(m->headers[i]);
+	};
+	
+	m->hdrcount = 0;
 }
 
 /* Recursive thread safe replacement of inet_ntoa */

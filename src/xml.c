@@ -139,6 +139,11 @@ int ParseXMLInput(char *xb, struct message *m) {
 	if (b && e) {
 		bt = strstr((char *)(b + strlen(XML_BEGIN_INPUT) + 1), "<");
 		while (bt < e) {
+			if(! (m->headers[m->hdrcount] = malloc(sizeof(char) * MAX_LEN)))
+				break;
+				
+			memset(m->headers[m->hdrcount], 0, sizeof(char) * MAX_LEN);
+		
 			et = strstr(bt+1, "<");
 			memset(tag, 0, sizeof tag);
 			strncpy(tag, bt, (et-bt) );
@@ -149,7 +154,10 @@ int ParseXMLInput(char *xb, struct message *m) {
 			i = strstr(tag+1, "\"") + 1;
 			strncat( m->headers[m->hdrcount], i, strstr(i, "\"") - i );
 			debugmsg("parsed: %s",  m->headers[m->hdrcount]);
-			m->hdrcount++;
+			if( m->hdrcount < MAX_HEADERS - 1 )
+				m->hdrcount++;
+			else
+				break;
 		}
 		res = 1;
 	} else

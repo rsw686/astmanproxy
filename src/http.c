@@ -96,6 +96,11 @@ int ParseHTTPInput(char *buf, struct message *m) {
 
 	n = buf;
 	while ( (v = strstr(n, "=")) ) {
+		if(! (m->headers[m->hdrcount] = malloc(sizeof(char) * MAX_LEN)))
+			break;
+			
+		memset(m->headers[m->hdrcount], 0, sizeof(char) * MAX_LEN);
+				
 		v += 1;
 		debugmsg("n: %s, v: %s", n, v);
 		strncat(m->headers[m->hdrcount], n, v-n-1);

@@ -20,6 +20,7 @@ extern int SetProcUID( void );
 extern void *proxyaction_do(char *proxyaction, struct message *m, struct mansession *s);
 extern void *ProxyLogin(struct mansession *s, struct message *m);
 extern void *ProxyLogoff(struct mansession *s, struct message *m);
+extern void *ProxyFullyBooted(struct mansession *s);
 extern int  ValidateAction(struct message *m, struct mansession *s, int inbound);
 extern int  AddToStack(struct message *m, struct mansession *s, int withbody);
 extern void DelFromStack(struct message *m, struct mansession *s);
@@ -86,12 +87,12 @@ void leave(int sig) {
 		}
 		if (c->server) {
 			if (debug)
-				debugmsg("asterisk@%s: closing session", ast_inet_ntoa(iabuf, sizeof(iabuf), c->sin.sin_addr));
+				debugmsg("asterisk@%s: closing server session", ast_inet_ntoa(iabuf, sizeof(iabuf), c->sin.sin_addr));
 			c->output->write(c, &sm);
 			logmsg("Shutdown, closed server %s", ast_inet_ntoa(iabuf, sizeof(iabuf), c->sin.sin_addr));
 		} else {
 			if (debug)
-				debugmsg("client@%s: closing session", ast_inet_ntoa(iabuf, sizeof(iabuf), c->sin.sin_addr));
+				debugmsg("client@%s: closing client session", ast_inet_ntoa(iabuf, sizeof(iabuf), c->sin.sin_addr));
 			c->output->write(c, &cm);
 			logmsg("Shutdown, closed client %s", ast_inet_ntoa(iabuf, sizeof(iabuf), c->sin.sin_addr));
 		}
@@ -101,6 +102,9 @@ void leave(int sig) {
 		free(c);
 	}
 	pthread_rwlock_unlock(&sessionlock);
+	
+	FreeHeaders(&sm);
+	FreeHeaders(&cm);
 
 	/* unload server list */
 	while (pc.serverlist) {
@@ -147,6 +151,7 @@ void Usage( void )
 	printf("Usage: astmanproxy [-d|-h|-v]\n");
 	printf(" -d : Start in Debug Mode\n");
 	printf(" -f : Run in foreground. Don't fork\n");
+	printf(" -g : Enable core dumps\n");
 	printf(" -h : Displays this message\n");
 	printf(" -v : Displays version information\n");
 	printf("Start with no options to run as daemon\n");
@@ -380,7 +385,8 @@ void *setactionid(char *actionid, struct message *m, struct mansession *s)
 void *session_do(struct mansession *s)
 {
 	struct message m;
-	int res;
+	int res, i;
+	char iabuf[INET_ADDRSTRLEN];
 	char *proxyaction, *actionid, *action, *key;
 
 	if (s->input->onconnect)
@@ -407,6 +413,12 @@ void *session_do(struct mansession *s)
 		m.session = s;
 
 		if (res > 0) {
+			if (debug) {
+				for(i=0; i<m.hdrcount; i++) {
+					debugmsg("client@%s got: %s", ast_inet_ntoa(iabuf, sizeof(iabuf), s->sin.sin_addr), m.headers[i]);
+				}
+			}
+		
 			/* Check for anything that requires proxy-side processing */
 			if (pc.key[0] != '\0' && !s->authenticated) {
 			key = astman_get_header(&m, "ProxyKey");
@@ -424,6 +436,7 @@ void *session_do(struct mansession *s)
 			if ( !strcasecmp(action, "Login") ) {
 				s->authenticated = 0;
 				ProxyLogin(s, &m);
+				ProxyFullyBooted(s);
 			} else if ( !strcasecmp(action, "Logoff") )
 				ProxyLogoff(s, &m);
 			else if ( !strcasecmp(action, "Challenge") )
@@ -440,13 +453,22 @@ void *session_do(struct mansession *s)
 			}
 		} else if (res < 0)
 			break;
+
+		FreeHeaders(&m);
 	}
 
+	FreeHeaders(&m);
 	destroy_session(s);
 	if (debug)
 		debugmsg("--- exiting session_do thread ---");
 	pthread_exit(NULL);
 	return NULL;
+}
+
+void CleanupAsterisk( void * arg )
+{
+	FreeHeaders(arg);
+	free(arg);
 }
 
 void *HandleAsterisk(struct mansession *s)
@@ -460,6 +482,8 @@ void *HandleAsterisk(struct mansession *s)
 	if (! (m = malloc(sizeof(struct message))) )
 		goto leave;
 	memset(m, 0, sizeof(struct message) );
+	
+	pthread_cleanup_push(&CleanupAsterisk, m);
 
 	// Signal settings are not always inherited by threads, so ensure we ignore this one
 	(void) signal(SIGPIPE, SIG_IGN);
@@ -502,8 +526,13 @@ void *HandleAsterisk(struct mansession *s)
 			if ( ConnectAsterisk(s) )
 				break;
 		}
+		
+		FreeHeaders(m);
 	}
+	FreeHeaders(m);
 	free(m);
+	   
+	pthread_cleanup_pop(1);
 
 leave:
 	if (debug)
@@ -556,6 +585,7 @@ int ConnectAsterisk(struct mansession *s) {
 			break;
 		}
 	}
+	FreeHeaders(&m);
 
 	return res;
 }
@@ -766,9 +796,11 @@ int main(int argc, char *argv[])
 	int flag;				/* for socket reuse */
 	pid_t pid;
 	char i;
+	struct rlimit l;
+	int core = 0;
 
 	/* Figure out if we are in debug mode, handle other switches */
-	while (( i = getopt( argc, argv, "dhvf" ) ) != EOF )
+	while (( i = getopt( argc, argv, "dhvfg" ) ) != EOF )
 	{
 		switch( i ) {
 			case 'f':
@@ -776,6 +808,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'd':
 				debug++;
+				break;
+			case 'g':
+				core=1;
 				break;
 			case 'h':
 				Usage();
@@ -795,10 +830,33 @@ int main(int argc, char *argv[])
 	debugmsg("loading handlers");
 	LoadHandlers();
 	debugmsg("loaded handlers");
-
+	
+	if(core) {
+		memset(&l, 0, sizeof(l));
+		l.rlim_cur = RLIM_INFINITY;
+		l.rlim_max = RLIM_INFINITY;
+		if (setrlimit(RLIMIT_CORE, &l)) {
+			fprintf(stderr, "Unable to disable core size resource limit: %s\n", strerror(errno));
+		}
+	}
+	
 	if (SetProcUID()) {
 		fprintf(stderr,"Cannot set user/group!	Check proc_user and proc_group config setting!\n");
 		exit(1);
+	}
+	
+	if(core) {
+		if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) < 0) {
+			fprintf(stderr, "Unable to set the process for core dumps after changing to a non-root user. %s\n", strerror(errno));
+		}
+
+		char dir[PATH_MAX];
+		if (!getcwd(dir, sizeof(dir)) || eaccess(dir, W_OK)) {
+			fprintf(stderr, "Unable to write to the running directory (%s).  Changing to '/tmp'.\n", strerror(errno));
+			if (chdir("/tmp")) {
+				fprintf(stderr, "chdir(\"/\") failed?!! %s\n", strerror(errno));
+			}
+		}
 	}
 
 	/* If we are not in debug mode, then fork to background */
@@ -848,10 +906,14 @@ int main(int argc, char *argv[])
 
 	/* Set listener socket re-use options */
 	flag = 1;
-	setsockopt(asock, SOL_SOCKET, SO_REUSEADDR, (void *)&flag, sizeof(flag));
+	if(setsockopt(asock, SOL_SOCKET, SO_REUSEADDR, (void *)&flag, sizeof(flag)) < 0) {
+		fprintf(stderr,"Error setting SO_REUSEADDR on listener socket!\n");
+	}
 	lingerstruct.l_onoff = 1;
 	lingerstruct.l_linger = 5;
-	setsockopt(asock, SOL_SOCKET, SO_LINGER, (void *)&lingerstruct, sizeof(lingerstruct));
+	if(setsockopt(asock, SOL_SOCKET, SO_LINGER, (void *)&lingerstruct, sizeof(lingerstruct)) < 0) {
+		fprintf(stderr,"Error setting SO_LINGER on listener socket!\n");
+	}
 	
 	if (bind(asock, (struct sockaddr *) &serv_sock_addr, sizeof serv_sock_addr ) < 0) {
 		fprintf(stderr,"Cannot bind to listener socket!\n");

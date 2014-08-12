@@ -1,3 +1,11 @@
+1.29
+	Added FullyBooted event
+	Changed message headers to be dynamically allocated
+	Added handling for long lined response follows
+	Fixed bug in standard write
+	Added flag to enabled core dumps
+	Added shutdown cleanup code for server thread
+	
 1.28
 	Time for a new tagged version
 	HTTP speed up for large responses
